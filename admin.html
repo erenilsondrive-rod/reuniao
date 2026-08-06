@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Ata de Presença</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; color: #000000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .uppercase-input { text-transform: uppercase; }
+        .auth-card { max-width: 400px; margin: 80px auto; }
+    </style>
+</head>
+<body>
+
+    <!-- CABEÇALHO COM LOGOMARCA PARA EXPORTAÇÃO PDF -->
+    <div class="d-none">
+        <img id="imgLogoHeader" src="logomarca.png" alt="Logomarca" onerror="this.style.display='none';">
+    </div>
+
+    <div id="authContainer" class="container">
+        <div class="card border-0 shadow-lg rounded-4 p-4 auth-card text-center">
+            <div class="mb-3">
+                <i class="bi bi-shield-lock-fill text-dark display-4"></i>
+            </div>
+            <h4 class="fw-bold text-dark mb-3">ACESSO RESTRITO</h4>
+            <p class="text-muted small mb-4">INFORME A SENHA MASTER DO ADMINISTRADOR PARA CONTINUAR</p>
+            <form id="formLogin">
+                <div class="mb-3">
+                    <input type="password" class="form-control form-control-lg text-center" id="txtSenhaAdmin" placeholder="SENHA DE ACESSO" required>
+                </div>
+                <button type="submit" class="btn btn-dark btn-lg w-100 fw-bold">ENTRAR NO PAINEL</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminPanelContainer" style="display: none;">
+        <nav class="navbar navbar-dark bg-dark shadow-sm mb-4">
+            <div class="container-fluid px-4">
+                <span class="navbar-brand mb-0 h1 fs-4 fw-bold">
+                    <i class="bi bi-shield-lock-fill me-2"></i> PAINEL ADMINISTRATIVO
+                </span>
+                <div class="d-flex gap-2">
+                    <a href="index.html" class="btn btn-outline-light btn-sm"><i class="bi bi-easel me-1"></i> VER PROJETOR</a>
+                    <button class="btn btn-success btn-sm fw-bold" onclick="exportarExcel()"><i class="bi bi-file-earmark-excel me-1"></i> EXPORTAR XLSX</button>
+                    <button class="btn btn-danger btn-sm fw-bold" onclick="exportarPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> EXPORTAR PDF</button>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#setupModal"><i class="bi bi-gear-fill me-1"></i> CONFIGURAÇÕES</button>
+                    <button class="btn btn-outline-danger btn-sm ms-2" onclick="fazerLogout()"><i class="bi bi-box-arrow-right"></i> SAIR</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container-fluid px-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold text-dark mb-0">GERENCIAMENTO DE PARTICIPANTES</h4>
+                    <button class="btn btn-outline-secondary btn-sm" id="btnSync"><i class="bi bi-arrow-repeat me-1"></i> SINCRONIZAR GITHUB</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>NOME</th>
+                                <th>SETOR</th>
+                                <th>EMPRESA</th>
+                                <th>E-MAIL</th>
+                                <th>CELULAR</th>
+                                <th>HORÁRIO</th>
+                                <th class="text-center">AÇÕES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblAdminParticipantes">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">EDITAR PARTICIPANTE</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditar">
+                        <input type="hidden" id="editId">
+                        <div class="mb-3"><label class="form-label fw-bold">NOME</label><input type="text" class="form-control uppercase-input" id="editNome" required></div>
+                        <div class="mb-3"><label class="form-label fw-bold">SETOR</label><input type="text" class="form-control uppercase-input" id="editSetor" required></div>
+                        <div class="mb-3"><label class="form-label fw-bold">EMPRESA</label><input type="text" class="form-control uppercase-input" id="editEmpresa" required></div>
+                        <div class="mb-3"><label class="form-label fw-bold">E-MAIL</label><input type="email" class="form-control uppercase-input" id="editEmail" required></div>
+                        <div class="mb-3"><label class="form-label fw-bold">CELULAR</label><input type="text" class="form-control" id="editCelular" required></div>
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CANCELAR</button>
+                            <button type="submit" class="btn btn-primary fw-bold">SALVAR ALTERAÇÕES</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="setupModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">CONFIGURAÇÕES DO SISTEMA</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formSetup">
+                        <!-- SESSÃO PERSONALIZAR REUNIÃO -->
+                        <h6 class="fw-bold border-bottom pb-2 text-primary">PERSONALIZAR REUNIÃO</h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">TEMA DA REUNIÃO</label>
+                            <input type="text" class="form-control uppercase-input" id="cfgTemaReuniao" placeholder="EX: REUNIÃO GERENCIAL ANUAL">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">LOCAL</label>
+                            <input type="text" class="form-control uppercase-input" id="cfgLocalReuniao" placeholder="EX: SALA DE REUNIÕES 01 / AUDITÓRIO">
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">DATA</label>
+                                <input type="date" class="form-control" id="cfgDataReuniao">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">HORÁRIO</label>
+                                <input type="time" class="form-control" id="cfgHorarioReuniao">
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold border-bottom pb-2 text-primary mt-4">ALTERAR SENHA MASTER</h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">NOVA SENHA ADMIN</label>
+                            <input type="password" class="form-control" id="cfgNovaSenha" placeholder="DEIXE EM BRANCO PARA MANTER A ATUAL">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">CONFIRMAR NOVA SENHA ADMIN</label>
+                            <input type="password" class="form-control" id="cfgConfirmarNovaSenha" placeholder="CONFIRME A NOVA SENHA">
+                        </div>
+
+                        <h6 class="fw-bold border-bottom pb-2 text-primary mt-4">REPOSITÓRIO GITHUB</h6>
+                        <div class="mb-3"><label class="form-label fw-bold">USUÁRIO GITHUB</label><input type="text" class="form-control" id="cfgUser"></div>
+                        <div class="mb-3"><label class="form-label fw-bold">REPOSITÓRIO</label><input type="text" class="form-control" id="cfgRepo"></div>
+                        <div class="mb-3"><label class="form-label fw-bold">BRANCH</label><input type="text" class="form-control" id="cfgBranch" value="main"></div>
+                        <div class="mb-3"><label class="form-label fw-bold">CAMINHO DO ARQUIVO JSON</label><input type="text" class="form-control" id="cfgPath" value="presencas.json"></div>
+                        <div class="mb-3"><label class="form-label fw-bold">PERSONAL ACCESS TOKEN (PAT)</label><input type="password" class="form-control" id="cfgToken"></div>
+
+                        <div class="modal-footer px-0 pb-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CANCELAR</button>
+                            <button type="submit" class="btn btn-dark fw-bold">SALVAR CONFIGURAÇÕES</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        let editModalInstance;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarConfiguracoes();
+            carregarDadosLocais();
+            verificarAutenticacao();
+
+            editModalInstance = new bootstrap.Modal(document.getElementById('modalEditar'));
+
+            document.getElementById('formLogin').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const senhaDigitada = document.getElementById('txtSenhaAdmin').value;
+                if (validarSenhaAdmin(senhaDigitada)) {
+                    sessionStorage.setItem('admin_auth', 'true');
+                    verificarAutenticacao();
+                } else {
+                    alert("SENHA INCORRETA! TENTE NOVAMENTE.");
+                }
+            });
+
+            document.getElementById('btnSync').addEventListener('click', async () => {
+                await carregarDadosGitHub();
+                renderizarTabelaAdmin();
+            });
+
+            document.getElementById('formSetup').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const novaSenha = document.getElementById('cfgNovaSenha').value.trim();
+                const confirmarNovaSenha = document.getElementById('cfgConfirmarNovaSenha').value.trim();
+
+                if (novaSenha !== "" || confirmarNovaSenha !== "") {
+                    if (novaSenha !== confirmarNovaSenha) {
+                        alert("ERRO: AS SENHAS DIGITADAS NÃO COINCIDEM!");
+                        return;
+                    }
+                    localStorage.setItem('gh_ata_admin_pass', novaSenha);
+                    alert("SENHA ADMINISTRATIVA ATUALIZADA COM SUCESSO!");
+                }
+                salvarConfiguracoes(e);
+            });
+
+            document.getElementById('editCelular').addEventListener('input', (e) => {
+                e.target.value = mascararCelular(e.target.value);
+            });
+
+            document.getElementById('formEditar').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = parseInt(document.getElementById('editId').value);
+                const idx = participantes.findIndex(p => p.id === id);
+
+                if (idx !== -1) {
+                    participantes[idx].nome = document.getElementById('editNome').value.trim().toUpperCase();
+                    participantes[idx].setor = document.getElementById('editSetor').value.trim().toUpperCase();
+                    participantes[idx].empresa = document.getElementById('editEmpresa').value.trim().toUpperCase();
+                    participantes[idx].email = document.getElementById('editEmail').value.trim().toUpperCase();
+                    participantes[idx].celular = document.getElementById('editCelular').value.trim();
+
+                    salvarDadosLocais();
+                    if (githubConfig.token) await salvarDadosNoGitHub();
+                    renderizarTabelaAdmin();
+                    editModalInstance.hide();
+                    alert("REGISTRO ATUALIZADO COM SUCESSO!");
+                }
+            });
+        });
+
+        function verificarAutenticacao() {
+            const isAuth = sessionStorage.getItem('admin_auth') === 'true';
+            if (isAuth) {
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('adminPanelContainer').style.display = 'block';
+                renderizarTabelaAdmin();
+            } else {
+                document.getElementById('authContainer').style.display = 'block';
+                document.getElementById('adminPanelContainer').style.display = 'none';
+            }
+        }
+
+        function fazerLogout() {
+            sessionStorage.removeItem('admin_auth');
+            window.location.href = "index.html";
+        }
+
+        function renderizarTabelaAdmin() {
+            const tbody = document.getElementById('tblAdminParticipantes');
+            tbody.innerHTML = '';
+
+            if (participantes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">NENHUM PARTICIPANTE REGISTRADO.</td></tr>`;
+                return;
+            }
+
+            participantes.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <th>${index + 1}</th>
+                    <td class="fw-bold">${escapeHtml(p.nome)}</td>
+                    <td>${escapeHtml(p.setor)}</td>
+                    <td>${escapeHtml(p.empresa)}</td>
+                    <td>${escapeHtml(p.email)}</td>
+                    <td>${escapeHtml(p.celular)}</td>
+                    <td><span class="badge bg-light text-dark border">${p.dataHora}</span></td>
+                    <td class="text-center">
+                        <button class="btn btn-warning btn-sm me-1" onclick="abrirEditar(${p.id})"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-danger btn-sm" onclick="excluirItem(${p.id})"><i class="bi bi-trash-fill"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function abrirEditar(id) {
+            const item = participantes.find(p => p.id === id);
+            if (!item) return;
+
+            document.getElementById('editId').value = item.id;
+            document.getElementById('editNome').value = item.nome;
+            document.getElementById('editSetor').value = item.setor;
+            document.getElementById('editEmpresa').value = item.empresa;
+            document.getElementById('editEmail').value = item.email;
+            document.getElementById('editCelular').value = item.celular;
+
+            editModalInstance.show();
+        }
+
+        async function excluirItem(id) {
+            if (confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTE REGISTRO?")) {
+                participantes = participantes.filter(p => p.id !== id);
+                salvarDadosLocais();
+                if (githubConfig.token) await salvarDadosNoGitHub();
+                renderizarTabelaAdmin();
+            }
+        }
+    </script>
+</body>
+</html>
