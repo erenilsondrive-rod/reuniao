@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <!-- Configurações Meta e Codificação de Caracteres -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ata de Presença - Reunião Gerencial</title>
+
+    <!-- Bootstrap 5 CSS via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Estilos Customizados da Aplicação -->
+    <style>
+        /* Ajuste do fundo e tipografia para alta legibilidade em projetores */
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Banner Superior para Logomarcas */
+        .header-logos {
+            background-color: #ffffff;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .header-logos img {
+            max-height: 60px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* Card do QR Code estilizado para destaque */
+        .qr-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            padding: 24px;
+            text-align: center;
+        }
+
+        /* Container do QR Code para garantir proporções e tamanho para projetor */
+        #qrcode img, #qrcode canvas {
+            margin: 0 auto;
+            max-width: 280px;
+            height: auto;
+            border: 8px solid #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Card do Contador com número em grande formato */
+        .counter-card {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            color: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(13, 110, 253, 0.25);
+        }
+
+        .counter-number {
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        /* Tabela e Lista de Participantes */
+        .table-responsive-container {
+            max-height: 480px;
+            overflow-y: auto;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        }
+
+        /* Animação simples para inclusão de novos participantes */
+        .fade-in-row {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SEÇÃO SUPERIOR: Logomarcas da Empresa / Órgão -->
+    <header class="header-logos">
+        <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+            <!-- Logomarca da Empresa (Lado Esquerdo) -->
+            <img src="logomarca.png" alt="Logomarca da Empresa" class="img-fluid" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+            <span class="text-muted small d-none" style="display:none;">[logomarca.png]</span>
+
+            <!-- Brasão / Logo Oficial (Lado Direito) -->
+            <img src="brasao.png" alt="Brasão Oficial" class="img-fluid" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+            <span class="text-muted small d-none" style="display:none;">[brasao.png]</span>
+        </div>
+    </header>
+
+    <!-- NAV BAR - Cabeçalho Principal -->
+    <nav class="navbar navbar-dark bg-primary shadow-sm mb-4">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand mb-0 h1 fs-4 fw-bold">
+                <i class="bi bi-journal-check me-2"></i>Ata de Presença Gerencial
+            </span>
+            <div class="d-flex gap-2">
+                <!-- Botão de Download da Planilha Excel (.xlsx) -->
+                <button class="btn btn-success btn-sm fw-semibold" id="btnDownloadXlsx">
+                    <i class="bi bi-file-earmark-excel-fill me-1"></i> Baixar XLSX
+                </button>
+                <!-- Botão de Configuração do Repositório (Setup GitHub) -->
+                <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#setupModal">
+                    <i class="bi bi-gear-fill me-1"></i> Configurações / GitHub
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTAINER PRINCIPAL -->
+    <div class="container-fluid px-4">
+        <div class="row g-4">
+            
+            <!-- COLUNA ESQUERDA: Exibição para Projetor (QR Code + Contador) -->
+            <div class="col-lg-4 col-md-5">
+                
+                <!-- Card com QR Code para Leitura rápida nos celulares -->
+                <div class="qr-card mb-4">
+                    <h5 class="fw-bold text-dark mb-2">Escaneie para Assinar</h5>
+                    <p class="text-muted small mb-3">Aponte a câmera do celular para confirmar sua presença</p>
+                    
+                    <!-- Div onde o QR Code será renderizado dinamicamente pelo JavaScript -->
+                    <div id="qrcode" class="my-3 d-flex justify-content-center"></div>
+                    
+                    <span class="badge bg-soft-primary text-primary mt-2 p-2 w-100 border text-wrap small" id="lblUrlPagina">
+                        Carregando link...
+                    </span>
+                </div>
+
+                <!-- Card Contador de Presenças Confirmadas -->
+                <div class="counter-card text-center mb-4">
+                    <div class="text-uppercase fw-semibold small tracking-wide opacity-75">Participantes Confirmados</div>
+                    <div class="counter-number my-2" id="totalParticipantes">0</div>
+                    <div class="small opacity-75"><i class="bi bi-people-fill me-1"></i> Atualizado em tempo real</div>
+                </div>
+
+            </div>
+
+            <!-- COLUNA DIREITA: Formulário e Lista de Participantes em Tempo Real -->
+            <div class="col-lg-8 col-md-7">
+                
+                <!-- Navegação por Abas (Formulário vs Lista Registrada) -->
+                <ul class="nav nav-pills mb-3" id="mainTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="form-tab" data-bs-toggle="tab" data-bs-target="#form-pane" type="button" role="tab">
+                            <i class="bi bi-pencil-square me-1"></i> Form. de Presença
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="list-tab" data-bs-toggle="tab" data-bs-target="#list-pane" type="button" role="tab">
+                            <i class="bi bi-list-check me-1"></i> Lista de Presentes
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="mainTabsContent">
+                    
+                    <!-- ABA 1: FORMULÁRIO DE PREENCHIMENTO -->
+                    <div class="tab-pane fade show active" id="form-pane" role="tabpanel">
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <h4 class="card-title fw-bold mb-3 text-primary">Confirmar Presença na Reunião</h4>
+                            <p class="text-muted mb-4">Preencha os seus dados abaixo para registrar sua entrada na ata oficial.</p>
+
+                            <form id="formPresenca">
+                                <div class="row g-3">
+                                    <!-- Nome Completo -->
+                                    <div class="col-12">
+                                        <label for="txtNome" class="form-label fw-semibold">Nome Completo *</label>
+                                        <input type="text" class="form-control" id="txtNome" required placeholder="Ex: Maria da Silva">
+                                    </div>
+
+                                    <!-- Setor / Departamento -->
+                                    <div class="col-md-6">
+                                        <label for="txtSetor" class="form-label fw-semibold">Setor / Departamento *</label>
+                                        <input type="text" class="form-control" id="txtSetor" required placeholder="Ex: Controladoria">
+                                    </div>
+
+                                    <!-- Empresa -->
+                                    <div class="col-md-6">
+                                        <label for="txtEmpresa" class="form-label fw-semibold">Empresa *</label>
+                                        <input type="text" class="form-control" id="txtEmpresa" required placeholder="Ex: Matriz S/A">
+                                    </div>
+
+                                    <!-- E-mail -->
+                                    <div class="col-md-6">
+                                        <label for="txtEmail" class="form-label fw-semibold">E-mail *</label>
+                                        <input type="email" class="form-control" id="txtEmail" required placeholder="exemplo@empresa.com">
+                                    </div>
+
+                                    <!-- Celular / Telefone -->
+                                    <div class="col-md-6">
+                                        <label for="txtCelular" class="form-label fw-semibold">Celular / WhatsApp *</label>
+                                        <input type="tel" class="form-control" id="txtCelular" required placeholder="(00) 00000-0000">
+                                    </div>
+                                </div>
+
+                                <!-- Botão de Envio do Formulário -->
+                                <div class="mt-4 d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary btn-lg px-5 rounded-3" id="btnSubmit">
+                                        <i class="bi bi-check-circle-fill me-2"></i> Confirmar Presença
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- ABA 2: LISTA EM TEMPO REAL DOS PARTICIPANTES -->
+                    <div class="tab-pane fade" id="list-pane" role="tabpanel">
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="card-title fw-bold text-primary mb-0">Participantes Confirmados</h4>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-success btn-sm" onclick="exportarExcel()">
+                                        <i class="bi bi-download me-1"></i> Exportar XLSX
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" id="btnSync">
+                                        <i class="bi bi-arrow-repeat me-1"></i> Atualizar Lista
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Tabela Responsiva de Participantes -->
+                            <div class="table-responsive-container">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Nome</th>
+                                            <th>Setor</th>
+                                            <th>Empresa</th>
+                                            <th>Horário</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tblParticipantes">
+                                        <!-- Os dados serão injetados dinamicamente via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIGURAÇÃO (SETUP DO GITHUB & PARAMETROS) -->
+    <div class="modal fade" id="setupModal" tabindex="-1" aria-labelledby="setupModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="setupModalLabel"><i class="bi bi-github me-2"></i> Configuração do GitHub Repository</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formSetup">
+                        <p class="small text-muted mb-3">
+                            Configure o repositório para salvar a lista de presenças em um arquivo JSON. Se não configurado, os dados ficarão salvos temporariamente no navegador (LocalStorage).
+                        </p>
+                        
+                        <!-- Usuário GitHub -->
+                        <div class="mb-3">
+                            <label for="cfgUser" class="form-label fw-semibold">Usuário ou Organização GitHub</label>
+                            <input type="text" class="form-control" id="cfgUser" placeholder="Ex: meu-usuario">
+                        </div>
+
+                        <!-- Repositório -->
+                        <div class="mb-3">
+                            <label for="cfgRepo" class="form-label fw-semibold">Nome do Repositório</label>
+                            <input type="text" class="form-control" id="cfgRepo" placeholder="Ex: ata-reuniao-gerencial">
+                        </div>
+
+                        <!-- Branch -->
+                        <div class="mb-3">
+                            <label for="cfgBranch" class="form-label fw-semibold">Branch Principal</label>
+                            <input type="text" class="form-control" id="cfgBranch" value="main">
+                        </div>
+
+                        <!-- Caminho do Arquivo JSON -->
+                        <div class="mb-3">
+                            <label for="cfgPath" class="form-label fw-semibold">Caminho do Arquivo no Repositório</label>
+                            <input type="text" class="form-control" id="cfgPath" value="presencas.json">
+                        </div>
+
+                        <!-- GitHub Personal Access Token (PAT) -->
+                        <div class="mb-3">
+                            <label for="cfgToken" class="form-label fw-semibold">Personal Access Token (PAT - com escopo repo)</label>
+                            <input type="password" class="form-control" id="cfgToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                            <div class="form-text">Necessário apenas para salvar edições via API no repositório GitHub.</div>
+                        </div>
+
+                        <div class="modal-footer px-0 pb-0 pt-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BIBLIOTECAS JAVASCRIPT (CDN) -->
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- QRCode.js Library para geração local de código QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- SheetJS (xlsx) Library para geração e exportação de planilhas Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- LÓGICA DA APLICAÇÃO (JS CUSTOMIZADO) -->
+    <script>
+        // ESTADO GLOBAL DA APLICAÇÃO
+        let participantes = [];
+        let githubConfig = {
+            user: '',
+            repo: '',
+            branch: 'main',
+            path: 'presencas.json',
+            token: ''
+        };
+
+        // EXECUTADO QUANDO O DOM ESTIVER PRONTO
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarConfiguracoes();
+            gerarQRCode();
+            carregarDadosLocais();
+            carregarDadosGitHub();
+
+            // Handlers de Formulários e Botões
+            document.getElementById('formPresenca').addEventListener('submit', salvarPresenca);
+            document.getElementById('formSetup').addEventListener('submit', salvarConfiguracoes);
+            document.getElementById('btnSync').addEventListener('click', carregarDadosGitHub);
+            document.getElementById('btnDownloadXlsx').addEventListener('click', exportarExcel);
+        });
+
+        /* 1. GERAÇÃO DE QR CODE */
+        function gerarQRCode() {
+            const urlAtual = window.location.href;
+            document.getElementById('lblUrlPagina').innerText = urlAtual;
+            
+            // Limpa elemento antes de renderizar
+            document.getElementById('qrcode').innerHTML = "";
+            
+            new QRCode(document.getElementById("qrcode"), {
+                text: urlAtual,
+                width: 250,
+                height: 250,
+                colorDark : "#0d6efd",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+
+        /* 2. GERENCIAMENTO DE CONFIGURAÇÕES DO GITHUB */
+        function carregarConfiguracoes() {
+            const savedConfig = localStorage.getItem('gh_ata_config');
+            if (savedConfig) {
+                githubConfig = JSON.parse(savedConfig);
+                document.getElementById('cfgUser').value = githubConfig.user || '';
+                document.getElementById('cfgRepo').value = githubConfig.repo || '';
+                document.getElementById('cfgBranch').value = githubConfig.branch || 'main';
+                document.getElementById('cfgPath').value = githubConfig.path || 'presencas.json';
+                document.getElementById('cfgToken').value = githubConfig.token || '';
+            }
+        }
+
+        function salvarConfiguracoes(e) {
+            e.preventDefault();
+            githubConfig = {
+                user: document.getElementById('cfgUser').value.trim(),
+                repo: document.getElementById('cfgRepo').value.trim(),
+                branch: document.getElementById('cfgBranch').value.trim() || 'main',
+                path: document.getElementById('cfgPath').value.trim() || 'presencas.json',
+                token: document.getElementById('cfgToken').value.trim()
+            };
+
+            localStorage.setItem('gh_ata_config', JSON.stringify(githubConfig));
+            
+            // Fecha modal e atualiza
+            const modalEl = document.getElementById('setupModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+
+            alert('Configurações do GitHub salvas com sucesso!');
+            carregarDadosGitHub();
+        }
+
+        /* 3. GERENCIAMENTO E SALVAMENTO DOS DADOS DE PRESENÇA */
+        async function salvarPresenca(e) {
+            e.preventDefault();
+
+            const novoParticipante = {
+                id: Date.now(),
+                nome: document.getElementById('txtNome').value.trim(),
+                setor: document.getElementById('txtSetor').value.trim(),
+                empresa: document.getElementById('txtEmpresa').value.trim(),
+                email: document.getElementById('txtEmail').value.trim(),
+                celular: document.getElementById('txtCelular').value.trim(),
+                dataHora: new Date().toLocaleString('pt-BR')
+            };
+
+            // Adiciona na lista local
+            participantes.push(novoParticipante);
+            
+            // Persiste no LocalStorage
+            localStorage.setItem('gh_ata_dados', JSON.stringify(participantes));
+            
+            // Atualiza UI
+            renderizarTabela();
+            document.getElementById('formPresenca').reset();
+
+            // Notifica e tenta sincronizar com GitHub API
+            alert(`Presença confirmada com sucesso, ${novoParticipante.nome}!`);
+            
+            if (githubConfig.token && githubConfig.user && githubConfig.repo) {
+                await salvarDadosNoGitHub();
+            }
+        }
+
+        function carregarDadosLocais() {
+            const localData = localStorage.getItem('gh_ata_dados');
+            if (localData) {
+                participantes = JSON.parse(localData);
+                renderizarTabela();
+            }
+        }
+
+        /* 4. RENDERIZAÇÃO DA INTERFACE (TABELA E CONTADOR) */
+        function renderizarTabela() {
+            const tbody = document.getElementById('tblParticipantes');
+            const lblTotal = document.getElementById('totalParticipantes');
+
+            lblTotal.innerText = participantes.length;
+            tbody.innerHTML = '';
+
+            if (participantes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Nenhum participante assinou a ata até o momento.</td></tr>`;
+                return;
+            }
+
+            // Exibe do mais recente para o mais antigo
+            [...participantes].reverse().forEach((p, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'fade-in-row';
+                tr.innerHTML = `
+                    <th scope="row">${participantes.length - index}</th>
+                    <td class="fw-bold">${escapeHtml(p.nome)}</td>
+                    <td>${escapeHtml(p.setor)}</td>
+                    <td>${escapeHtml(p.empresa)}</td>
+                    <td><span class="badge bg-light text-dark">${p.dataHora}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        /* 5. INTEGRAÇÃO COM GITHUB REST API */
+        async function carregarDadosGitHub() {
+            if (!githubConfig.user || !githubConfig.repo) return;
+
+            const url = `https://api.github.com/repos/${githubConfig.user}/${githubConfig.repo}/contents/${githubConfig.path}?ref=${githubConfig.branch}`;
+
+            try {
+                const headers = githubConfig.token ? { 'Authorization': `token ${githubConfig.token}` } : {};
+                const res = await fetch(url, { headers });
+
+                if (res.ok) {
+                    const fileData = await res.json();
+                    // Decodifica UTF-8 do base64 do GitHub
+                    const content = decodeURIComponent(escape(atob(fileData.content)));
+                    const githubParticipantes = JSON.parse(content);
+
+                    if (Array.isArray(githubParticipantes)) {
+                        participantes = githubParticipantes;
+                        localStorage.setItem('gh_ata_dados', JSON.stringify(participantes));
+                        renderizarTabela();
+                    }
+                }
+            } catch (err) {
+                console.warn("Não foi possível carregar via GitHub API. Mantendo dados locais:", err);
+            }
+        }
+
+        async function salvarDadosNoGitHub() {
+            const url = `https://api.github.com/repos/${githubConfig.user}/${githubConfig.repo}/contents/${githubConfig.path}`;
+            
+            try {
+                // 1. Obter SHA do arquivo atual (se existir)
+                let sha = "";
+                const resGet = await fetch(`${url}?ref=${githubConfig.branch}`, {
+                    headers: { 'Authorization': `token ${githubConfig.token}` }
+                });
+
+                if (resGet.ok) {
+                    const dataGet = await resGet.json();
+                    sha = dataGet.sha;
+                }
+
+                // 2. Encodar conteúdo para Base64 com suporte a acentos/caracteres especiais
+                const contentJson = JSON.stringify(participantes, null, 2);
+                const contentBase64 = btoa(unescape(encodeURIComponent(contentJson)));
+
+                // 3. Fazer Commit via PUT
+                const resPut = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Ata de presença atualizada: ${participantes.length} participante(s)`,
+                        content: contentBase64,
+                        sha: sha !== "" ? sha : undefined,
+                        branch: githubConfig.branch
+                    })
+                });
+
+                if (resPut.ok) {
+                    console.log("Dados sincronizados com o repositório GitHub com sucesso!");
+                } else {
+                    console.error("Erro ao salvar no GitHub:", await resPut.json());
+                }
+            } catch (err) {
+                console.error("Falha na comunicação com a API do GitHub:", err);
+            }
+        }
+
+        /* 6. GERADOR E EXPORTADOR DE PLANILHA EXCEL (.XLSX) */
+        function exportarExcel() {
+            if (participantes.length === 0) {
+                alert("Não há dados de participantes registrados para exportar.");
+                return;
+            }
+
+            // Mapeia os dados estruturados para exibição na planilha
+            const dadosExcel = participantes.map((p, index) => ({
+                "Nº": index + 1,
+                "Nome Completo": p.nome,
+                "Setor / Departamento": p.setor,
+                "Empresa": p.empresa,
+                "E-mail": p.email,
+                "Celular / WhatsApp": p.celular,
+                "Data e Hora de Assinatura": p.dataHora
+            }));
+
+            // Cria uma nova planilha do SheetJS
+            const ws = XLSX.utils.json_to_sheet(dadosExcel);
+
+            // Ajusta largura padrão das colunas para melhor visualização
+            ws['!cols'] = [
+                { wch: 6 },   // Nº
+                { wch: 30 },  // Nome
+                { wch: 25 },  // Setor
+                { wch: 25 },  // Empresa
+                { wch: 30 },  // E-mail
+                { wch: 20 },  // Celular
+                { wch: 22 }   // Data/Hora
+            ];
+
+            // Cria o livro de trabalho (Workbook)
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Ata de Presença");
+
+            // Gera nome de arquivo formatado com a data atual
+            const dataHoje = new Date().toISOString().split('T')[0];
+            const nomeArquivo = `Ata_Presenca_Reuniao_${dataHoje}.xlsx`;
+
+            // Faz o download do arquivo .xlsx
+            XLSX.writeFile(wb, nomeArquivo);
+        }
+
+        // Função utilitária para prevenir XSS ao renderizar dados do usuário
+        function escapeHtml(str) {
+            return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '';
+        }
+    </script>
+</body>
+</html>
