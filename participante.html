@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmar Presença</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; color: #000000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .uppercase-input { text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card border-0 shadow-lg rounded-4 p-4">
+                    <h3 class="fw-bold text-center text-dark mb-3">REGISTRO DE PRESENÇA</h3>
+                    <p class="text-muted text-center mb-4 small">PREENCHA SEUS DADOS PARA ASSINAR A ATA OFICIAL</p>
+
+                    <form id="formPresenca">
+                        <div class="mb-3">
+                            <label for="txtNome" class="form-label fw-bold">NOME COMPLETO *</label>
+                            <input type="text" class="form-control uppercase-input" id="txtNome" required placeholder="EX: MARIA DA SILVA">
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="txtSetor" class="form-label fw-bold">SETOR / DEPARTAMENTO *</label>
+                                <input type="text" class="form-control uppercase-input" id="txtSetor" required placeholder="EX: CONTROLADORIA">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="txtEmpresa" class="form-label fw-bold">EMPRESA *</label>
+                                <input type="text" class="form-control uppercase-input" id="txtEmpresa" required placeholder="EX: MATRIZ S/A">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="txtEmail" class="form-label fw-bold">E-MAIL *</label>
+                                <input type="email" class="form-control uppercase-input" id="txtEmail" required placeholder="NOME@EMPRESA.COM">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="txtCelular" class="form-label fw-bold">CELULAR / WHATSAPP *</label>
+                                <input type="tel" class="form-control" id="txtCelular" required placeholder="(00) 00000-0000" maxlength="15">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-dark btn-lg w-100 fw-bold">
+                            <i class="bi bi-check-circle-fill me-2"></i> CONFIRMAR PRESENÇA
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarConfiguracoes(); // CORREÇÃO: Necessário para o app saber o token no form!
+            carregarDadosLocais();
+            
+            const inputCelular = document.getElementById('txtCelular');
+            inputCelular.addEventListener('input', (e) => {
+                e.target.value = mascararCelular(e.target.value);
+            });
+
+            const inputNome = document.getElementById('txtNome');
+            inputNome.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^a-zA-Zà-úÀ-Ú\s]/g, '');
+            });
+
+            document.getElementById('formPresenca').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const nome = document.getElementById('txtNome').value.trim().toUpperCase();
+                const setor = document.getElementById('txtSetor').value.trim().toUpperCase();
+                const empresa = document.getElementById('txtEmpresa').value.trim().toUpperCase();
+                const email = document.getElementById('txtEmail').value.trim().toUpperCase();
+                const celular = document.getElementById('txtCelular').value.trim();
+
+                if (contemObscenidade(nome) || contemObscenidade(setor) || contemObscenidade(empresa)) {
+                    alert("ERRO: O FORMULÁRIO CONTÉM TERMOS IMPRÓPRIOS OU INVALIDOS.");
+                    return;
+                }
+
+                if (!validarEmail(email)) {
+                    alert("ERRO: POR FAVOR, INFORME UM E-MAIL VÁLIDO.");
+                    return;
+                }
+
+                if (celular.length < 14) {
+                    alert("ERRO: POR FAVOR, INFORME UM NÚMERO DE CELULAR VÁLIDO COM DDD.");
+                    return;
+                }
+
+                const existe = participantes.some(p => p.email === email || p.celular === celular);
+                if (existe) {
+                    alert("ATENÇÃO: JÁ EXISTE UM REGISTRO CONFIRMADO COM ESTE E-MAIL OU CELULAR!");
+                    return;
+                }
+
+                const novoParticipante = {
+                    id: Date.now(),
+                    nome,
+                    setor,
+                    empresa,
+                    email,
+                    celular,
+                    dataHora: new Date().toLocaleString('pt-BR')
+                };
+
+                participantes.push(novoParticipante);
+                salvarDadosLocais();
+                
+                // Se as configurações existirem, tenta criar/salvar no Github
+                if (githubConfig.token && githubConfig.user && githubConfig.repo) {
+                    await salvarDadosNoGitHub();
+                }
+
+                alert(`PRESENÇA CONFIRMADA COM SUCESSO, ${nome}!`);
+                document.getElementById('formPresenca').reset();
+            });
+        });
+    </script>
+</body>
+</html>
