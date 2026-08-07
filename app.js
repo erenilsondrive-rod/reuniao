@@ -236,7 +236,7 @@ function exportarPDF() {
             const imgData = canvas.toDataURL('image/png');
             
             // Reduzido 15% nas dimensões (largura original 40 -> 34, altura 18 -> 15.3)
-            doc.addImage(imgData, 'PNG', 14, 20, 34, 15.3);
+            doc.addImage(imgData, 'PNG', 14, 60, 34, 15.3);
             textXPosition = 54;
         } catch (e) {
             console.warn("NÃO FOI POSSÍVEL CARREGAR A IMAGEM NO PDF:", e);
