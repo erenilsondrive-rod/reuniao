@@ -53,9 +53,19 @@
 
         <div class="container-fluid px-4">
             <div class="card border-0 shadow-sm rounded-4 p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                     <h4 class="fw-bold text-dark mb-0">GERENCIAMENTO DE PARTICIPANTES</h4>
-                    <button class="btn btn-outline-secondary btn-sm" id="btnSync"><i class="bi bi-arrow-repeat me-1"></i> SINCRONIZAR GITHUB</button>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary btn-sm fw-bold" onclick="abrirGerenciadorAtas()"><i class="bi bi-collection me-1"></i> ATAS SALVAS</button>
+                        <button class="btn btn-warning btn-sm fw-bold" onclick="salvarAtaAtual()"><i class="bi bi-save me-1"></i> SALVAR ATA</button>
+                        <button class="btn btn-danger btn-sm fw-bold" onclick="limparAtaAtual()"><i class="bi bi-eraser me-1"></i> LIMPAR ATUAL</button>
+                        <button class="btn btn-outline-secondary btn-sm fw-bold" id="btnSync"><i class="bi bi-arrow-repeat me-1"></i> SINCRONIZAR GITHUB</button>
+                    </div>
+                </div>
+
+                <!-- BARRA DE PROGRESSO DO GITHUB -->
+                <div id="syncProgressContainer" class="progress mb-3" style="height: 6px; display: none;">
+                    <div id="syncProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%;"></div>
                 </div>
 
                 <div class="table-responsive">
@@ -80,6 +90,39 @@
         </div>
     </div>
 
+    <!-- MODAL GERENCIADOR DE ATAS SALVAS -->
+    <div class="modal fade" id="modalAtasSalvas" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-journal-album me-2"></i>HISTÓRICO DE ATAS SALVAS</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="table-responsive m-0">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">NOME / TEMA</th>
+                                    <th>DATA</th>
+                                    <th>PARTICIPANTES</th>
+                                    <th class="text-center pe-3">AÇÕES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tblAtasSalvas">
+                                <!-- Preenchido dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">FECHAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDIÇÃO -->
     <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -105,6 +148,7 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIGURAÇÕES DO SISTEMA -->
     <div class="modal fade" id="setupModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
@@ -169,6 +213,7 @@
     <script src="app.js"></script>
     <script>
         let editModalInstance;
+        let atasModalInstance;
 
         document.addEventListener('DOMContentLoaded', () => {
             carregarConfiguracoes();
@@ -176,6 +221,7 @@
             verificarAutenticacao();
 
             editModalInstance = new bootstrap.Modal(document.getElementById('modalEditar'));
+            atasModalInstance = new bootstrap.Modal(document.getElementById('modalAtasSalvas'));
 
             document.getElementById('formLogin').addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -189,8 +235,21 @@
             });
 
             document.getElementById('btnSync').addEventListener('click', async () => {
+                const progressContainer = document.getElementById('syncProgressContainer');
+                const progressBar = document.getElementById('syncProgressBar');
+                
+                progressContainer.style.display = 'flex';
+                progressBar.style.width = '40%';
+                
                 await carregarDadosGitHub();
+                
+                progressBar.style.width = '100%';
                 renderizarTabelaAdmin();
+                
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 1500);
             });
 
             document.getElementById('formSetup').addEventListener('submit', (e) => {
@@ -234,6 +293,120 @@
             });
         });
 
+        // ==========================================
+        // LÓGICA DO GERENCIADOR DE MÚLTIPLAS ATAS
+        // ==========================================
+        
+        function limparAtaAtual() {
+            if(confirm("ATENÇÃO: ISSO IRÁ LIMPAR A ATA ATUAL DA TELA. DESEJA CONTINUAR?")) {
+                participantes = [];
+                reuniaoInfo = { tema: 'ATA DE PRESENÇA DA REUNIÃO', local: '', data: '', horario: '' };
+                salvarDadosLocais();
+                localStorage.setItem('gh_ata_reuniao', JSON.stringify(reuniaoInfo));
+                
+                // Limpa visualmente os campos do modal de setup
+                if(document.getElementById('cfgTemaReuniao')) {
+                    document.getElementById('cfgTemaReuniao').value = '';
+                    document.getElementById('cfgLocalReuniao').value = '';
+                    document.getElementById('cfgDataReuniao').value = '';
+                    document.getElementById('cfgHorarioReuniao').value = '';
+                }
+
+                renderizarTabelaAdmin();
+                alert("ATA ATUAL LIMPA COM SUCESSO! VOCÊ PODE INICIAR UMA NOVA.");
+            }
+        }
+
+        function salvarAtaAtual() {
+            if(participantes.length === 0) {
+                alert("A ATA ATUAL ESTÁ VAZIA. NADA PARA SALVAR.");
+                return;
+            }
+            
+            let nomePadrao = reuniaoInfo.tema !== 'ATA DE PRESENÇA DA REUNIÃO' ? reuniaoInfo.tema : `REUNIÃO ${new Date().toLocaleDateString('pt-BR')}`;
+            let nomeAta = prompt("DIGITE UM NOME PARA SALVAR ESTA ATA NO HISTÓRICO LOCAL:", nomePadrao);
+            
+            if(nomeAta) {
+                let historico = JSON.parse(localStorage.getItem('gh_ata_historico')) || [];
+                historico.push({
+                    id: Date.now(),
+                    nome: nomeAta.toUpperCase(),
+                    reuniaoInfo: JSON.parse(JSON.stringify(reuniaoInfo)),
+                    participantes: JSON.parse(JSON.stringify(participantes))
+                });
+                localStorage.setItem('gh_ata_historico', JSON.stringify(historico));
+                alert("ATA SALVA COM SUCESSO NO HISTÓRICO LOCAL!");
+            }
+        }
+
+        function abrirGerenciadorAtas() {
+            renderizarHistoricoAtas();
+            atasModalInstance.show();
+        }
+
+        function renderizarHistoricoAtas() {
+            const tbody = document.getElementById('tblAtasSalvas');
+            let historico = JSON.parse(localStorage.getItem('gh_ata_historico')) || [];
+            tbody.innerHTML = '';
+            
+            if(historico.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">NENHUMA ATA SALVA NO HISTÓRICO.</td></tr>`;
+                return;
+            }
+            
+            historico.forEach(ata => {
+                let dataFormat = ata.reuniaoInfo.data ? ata.reuniaoInfo.data.split('-').reverse().join('/') : 'N/I';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="ps-3 fw-bold">${escapeHtml(ata.nome)}</td>
+                    <td><span class="badge bg-light text-dark border">${dataFormat}</span></td>
+                    <td>${ata.participantes.length}</td>
+                    <td class="text-center pe-3">
+                        <button class="btn btn-success btn-sm me-1" onclick="carregarAtaSalva(${ata.id})" title="Carregar Ata"><i class="bi bi-folder2-open"></i></button>
+                        <button class="btn btn-danger btn-sm" onclick="excluirAtaSalva(${ata.id})" title="Excluir Ata"><i class="bi bi-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function carregarAtaSalva(id) {
+            if(confirm("ATENÇÃO: ISSO IRÁ SUBSTITUIR A ATA ATUAL NA TELA PELA ATA SELECIONADA. DESEJA CONTINUAR?")) {
+                let historico = JSON.parse(localStorage.getItem('gh_ata_historico')) || [];
+                const ata = historico.find(a => a.id === id);
+                if(ata) {
+                    participantes = ata.participantes;
+                    reuniaoInfo = ata.reuniaoInfo;
+                    salvarDadosLocais();
+                    localStorage.setItem('gh_ata_reuniao', JSON.stringify(reuniaoInfo));
+                    
+                    if (document.getElementById('cfgTemaReuniao')) {
+                        document.getElementById('cfgTemaReuniao').value = reuniaoInfo.tema || '';
+                        document.getElementById('cfgLocalReuniao').value = reuniaoInfo.local || '';
+                        document.getElementById('cfgDataReuniao').value = reuniaoInfo.data || '';
+                        document.getElementById('cfgHorarioReuniao').value = reuniaoInfo.horario || '';
+                    }
+
+                    renderizarTabelaAdmin();
+                    atasModalInstance.hide();
+                    alert("ATA CARREGADA COM SUCESSO!");
+                }
+            }
+        }
+
+        function excluirAtaSalva(id) {
+            if(confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTA ATA DEFINITIVAMENTE DO HISTÓRICO?")) {
+                let historico = JSON.parse(localStorage.getItem('gh_ata_historico')) || [];
+                historico = historico.filter(a => a.id !== id);
+                localStorage.setItem('gh_ata_historico', JSON.stringify(historico));
+                renderizarHistoricoAtas();
+            }
+        }
+
+        // ==========================================
+        // OUTRAS FUNÇÕES DO ADMIN
+        // ==========================================
+
         function verificarAutenticacao() {
             const isAuth = sessionStorage.getItem('admin_auth') === 'true';
             if (isAuth) {
@@ -256,7 +429,7 @@
             tbody.innerHTML = '';
 
             if (participantes.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">NENHUM PARTICIPANTE REGISTRADO.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">NENHUM PARTICIPANTE REGISTRADO NA ATA ATUAL.</td></tr>`;
                 return;
             }
 

@@ -68,7 +68,7 @@
 
             const inputNome = document.getElementById('txtNome');
             inputNome.addEventListener('input', (e) => {
-                e.target.value = e.target.value.replace(/[^a-zA-Aà-úÀ-Ú\s]/g, '');
+                e.target.value = e.target.value.replace(/[^a-zA-Zà-úÀ-Ú\s]/g, '');
             });
 
             document.getElementById('formPresenca').addEventListener('submit', async (e) => {
