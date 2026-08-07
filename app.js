@@ -100,17 +100,28 @@ function salvarConfiguracoes(e) {
     location.reload();
 }
 
+// INTEGRAÇÃO GITHUB REST API CORRIGIDA (CACHE E PARSER)
 async function carregarDadosGitHub() {
     if (!githubConfig.user || !githubConfig.repo) return;
     const url = `https://api.github.com/repos/${githubConfig.user}/${githubConfig.repo}/contents/${githubConfig.path}?ref=${githubConfig.branch}`;
 
     try {
-        const headers = githubConfig.token ? { 'Authorization': `token ${githubConfig.token}` } : {};
-        const res = await fetch(url, { headers });
+        const headers = {
+            'Accept': 'application/vnd.github.v3+json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+        };
+        if (githubConfig.token) {
+            headers['Authorization'] = `Bearer ${githubConfig.token}`;
+        }
+        
+        // cache: 'no-store' força o navegador a buscar os dados em tempo real
+        const res = await fetch(url, { headers, cache: 'no-store' });
 
         if (res.ok) {
             const fileData = await res.json();
-            const content = decodeURIComponent(escape(atob(fileData.content)));
+            // A API do Github retorna o Base64 com quebras de linha (\n). É obrigatório limpar antes de ler:
+            const cleanBase64 = fileData.content.replace(/\s/g, ''); 
+            const content = decodeURIComponent(escape(atob(cleanBase64)));
             const githubParticipantes = JSON.parse(content);
 
             if (Array.isArray(githubParticipantes)) {
@@ -127,8 +138,18 @@ async function salvarDadosNoGitHub() {
     const url = `https://api.github.com/repos/${githubConfig.user}/${githubConfig.repo}/contents/${githubConfig.path}`;
     try {
         let sha = "";
+        const headers = {
+            'Accept': 'application/vnd.github.v3+json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+        };
+        if (githubConfig.token) {
+            headers['Authorization'] = `Bearer ${githubConfig.token}`;
+        }
+
+        // 1. Obter o SHA mais recente (Ignorando o cache do navegador, passo crítico)
         const resGet = await fetch(`${url}?ref=${githubConfig.branch}`, {
-            headers: { 'Authorization': `token ${githubConfig.token}` }
+            headers: headers,
+            cache: 'no-store' 
         });
 
         if (resGet.ok) {
@@ -136,13 +157,15 @@ async function salvarDadosNoGitHub() {
             sha = dataGet.sha;
         }
 
+        // 2. Encodar arquivo
         const contentJson = JSON.stringify(participantes, null, 2);
         const contentBase64 = btoa(unescape(encodeURIComponent(contentJson)));
 
-        await fetch(url, {
+        // 3. Fazer Commit
+        const resPut = await fetch(url, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${githubConfig.token}`,
+                ...headers,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -152,6 +175,11 @@ async function salvarDadosNoGitHub() {
                 branch: githubConfig.branch
             })
         });
+
+        if (!resPut.ok) {
+            const errorDetails = await resPut.json();
+            console.error("ERRO AO SALVAR NO GITHUB:", errorDetails);
+        }
     } catch (err) {
         console.error("FALHA NA COMUNICAÇÃO COM O GITHUB:", err);
     }
